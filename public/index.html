@@ -1,240 +1,164 @@
-<!DOCTYPE html>  <html lang="en">  <head>  <meta charset="UTF-8">  
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">  
-
-<title>Generative AI Chat</title>  
-
-<style>  
-  * {  
-
-margin: 0;  
-
-padding: 0;  
-
-box-sizing: border-box;
-
-}
-
-body {
-
-font-family: Arial, sans-serif;  
-
-background-color: #f1f1f1;  
-
-display: flex;  
-
-justify-content: center;  
-
-align-items: center;  
-
-height: 100vh;
-
-}
-
-.chat-container {
-
-width: 400px;  
-
-background-color: white;  
-
-border-radius: 10px;  
-
-box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);  
-
-overflow: hidden;  
-
-display: flex;  
-
-flex-direction: column;
-
-}
-
-.chat-box {
-
-padding: 15px;  
-
-height: 400px;  
-
-overflow-y: auto;  
-
-flex-grow: 1;  
-
-border-bottom: 1px solid #ddd;
-
-}
-
-.input-container {
-
-display: flex;  
-
-padding: 10px;  
-
-background-color: #fff;  
-
-border-top: 1px solid #ddd;
-
-}
-
-#user-input {
-
-flex-grow: 1;  
-
-padding: 10px;  
-
-border: 1px solid #ddd;  
-
-border-radius: 5px;  
-
-font-size: 16px;
-
-}
-
-button {
-
-padding: 10px 15px;  
-
-background-color: #6200ea;  
-
-color: white;  
-
-border: none;  
-
-border-radius: 5px;  
-
-cursor: pointer;
-
-}
-
-button:hover {
-
-background-color: #3700b3;
-
-}
-</style>
-
-</head>  <body>  <div class="chat-container">  
-
-    <div id="chat-box" class="chat-box">  
-
-        <!-- Chat messages will be dynamically added here -->  
-
-    </div>  
-
-    <div class="input-container">  
-
-        <input id="user-input" type="text" placeholder="Type your message..." />  
-
-        <button onclick="sendMessage()">Send</button>  
-
-    </div>  
-
-</div>  
-
-
-
-<script>  
-  let sessionId;
-
-// Generate a unique session ID when the user opens the app
-
-function generateSessionId() {
-
-sessionId = localStorage.getItem('sessionId');  
-
-if (!sessionId) {  
-
-    sessionId = "1234"; 
-
-    localStorage.setItem('sessionId', sessionId);  
-
-}
-
-}
-
-generateSessionId();
-
-async function sendMessage() {
-
-const inputField = document.getElementById("user-input");  
-
-const userMessage = inputField.value.trim();  
-
-
-
-if (!userMessage) return;  
-
-
-
-appendMessage("You", userMessage);  
-
-inputField.value = "";  
-
-
-
-try {  
-
-    const response = await fetch('/api/chat', {  
-
-        method: 'POST',  
-
-        headers: { 'Content-Type': 'application/json' },  
-
-        body: JSON.stringify({  
-
-            sessionId: sessionId,  
-
-            userMessage: userMessage  
-
-        })  
-
-    });  
-
-
-
-    if (!response.ok) {  
-
-        throw new Error('Network response was not ok');  
-
-    }  
-
-
-
-    const data = await response.json();  
-
-    const aiMessage = data.response;  
-
-
-
-    appendMessage("AI", aiMessage);  
-
-
-
-} catch (error) {  
-
-    console.error(error);  
-
-    appendMessage("Error", "There was a problem processing your request.");  
-
-}
-
-}
-
-function appendMessage(sender, message) {
-
-const chatBox = document.getElementById("chat-box");  
-
-const messageElement = document.createElement("div");  
-
-messageElement.classList.add("message");  
-
-messageElement.innerHTML = `<strong>${sender}:</strong> ${message}`;  
-
-chatBox.appendChild(messageElement);  
-
-chatBox.scrollTop = chatBox.scrollHeight;
-
-}
-</script>
-
-</body>  
-</html>  
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generative AI Chat</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f1f1f1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .chat-container {
+      width: 400px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-box {
+      padding: 15px;
+      height: 400px;
+      overflow-y: auto;
+      flex-grow: 1;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .input-container {
+      display: flex;
+      padding: 10px;
+      background-color: #fff;
+      border-top: 1px solid #ddd;
+    }
+
+    #user-input {
+      flex-grow: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 10px 15px;
+      background-color: #6200ea;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #3700b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div id="chat-box" class="chat-box">
+      <!-- Chat messages will be dynamically added here -->
+    </div>
+    <div class="input-container">
+      <input id="user-input" type="text" placeholder="Type your message..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    let sessionId;
+
+    // Generate a unique session ID when the user opens the app
+    function generateSessionId() {
+      sessionId = localStorage.getItem('sessionId');
+      if (!sessionId) {
+        sessionId = crypto.randomUUID();
+        localStorage.setItem('sessionId', sessionId);
+      }
+    }
+
+    generateSessionId();
+
+    // Load chat history from localStorage
+    function loadChatHistory() {
+      const chatHistory = JSON.parse(localStorage.getItem(`chatHistory_${sessionId}`)) || [];
+      const chatBox = document.getElementById("chat-box");
+      chatHistory.forEach(message => {
+        appendMessage(message.sender, message.text, false);
+      });
+    }
+
+    // Save chat history to localStorage
+    function saveChatHistory(sender, message) {
+      const chatHistory = JSON.parse(localStorage.getItem(`chatHistory_${sessionId}`)) || [];
+      chatHistory.push({ sender, text: message });
+      localStorage.setItem(`chatHistory_${sessionId}`, JSON.stringify(chatHistory));
+    }
+
+    async function sendMessage() {
+      const inputField = document.getElementById("user-input");
+      const userMessage = inputField.value.trim();
+
+      if (!userMessage) return;
+
+      appendMessage("You", userMessage);
+      saveChatHistory("You", userMessage);
+      inputField.value = "";
+
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: sessionId,
+            userMessage: userMessage
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        const aiMessage = data.response;
+
+        appendMessage("AI", aiMessage);
+        saveChatHistory("AI", aiMessage);
+
+      } catch (error) {
+        console.error(error);
+        appendMessage("Error", "There was a problem processing your request.");
+      }
+    }
+
+    function appendMessage(sender, message, saveToHistory = true) {
+      const chatBox = document.getElementById("chat-box");
+      const messageElement = document.createElement("div");
+      messageElement.classList.add("message");
+      messageElement.innerHTML = `<strong>${sender}:</strong> ${message}`;
+      chatBox.appendChild(messageElement);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      if (saveToHistory) {
+        saveChatHistory(sender, message);
+      }
+    }
+
+    // Load chat history when the page loads
+    window.onload = loadChatHistory;
+  </script>
+</body>
+</html>
