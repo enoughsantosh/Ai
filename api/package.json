@@ -1,9 +1,0 @@
-{
-  "name": "google-genai",
-  "version": "1.0.0",
-  "main": "api/chat.js",
-  "dependencies": {
-    "@google/generative-ai": "latest",
-    "dotenv": "^16.0.3"
-  }
-}
