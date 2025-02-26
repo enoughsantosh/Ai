@@ -6,6 +6,7 @@
   <title>Generative AI Chat</title>
   <!-- Include Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     /* Custom scrollbar for chat box */
     .chat-box::-webkit-scrollbar {
@@ -21,29 +22,51 @@
     .chat-box::-webkit-scrollbar-thumb:hover {
       background: #555;
     }
+    /* Smooth transitions */
+    .message-bubble {
+      transition: all 0.2s ease;
+    }
+    .message-bubble:hover {
+      transform: translateY(-2px);
+    }
   </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center h-screen">
-  <div class="bg-white rounded-lg shadow-lg w-[400px] flex flex-col">
+<body class="bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center h-screen font-sans">
+  <div class="bg-white rounded-xl shadow-xl w-[450px] h-[600px] flex flex-col">
+    <!-- Header -->
+    <div class="bg-purple-700 text-white p-4 rounded-t-xl flex items-center justify-between">
+      <div class="flex items-center">
+        <i class="fas fa-robot mr-2"></i>
+        <h1 class="text-xl font-semibold">AI Assistant</h1>
+      </div>
+      <button onclick="clearChat()" class="text-white/80 hover:text-white transition-colors">
+        <i class="fas fa-trash-alt"></i>
+      </button>
+    </div>
+
     <!-- Chat Box -->
-    <div id="chat-box" class="chat-box p-4 flex-1 overflow-y-auto">
+    <div id="chat-box" class="chat-box p-4 flex-1 overflow-y-auto bg-gray-50">
+      <div class="flex justify-center mb-4">
+        <span class="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full">Today</span>
+      </div>
       <!-- Chat messages will be dynamically added here -->
     </div>
 
     <!-- Input Container -->
-    <div class="border-t p-4 bg-gray-50">
+    <div class="border-t p-4 bg-white rounded-b-xl">
       <div class="flex gap-2">
         <input
           id="user-input"
           type="text"
           placeholder="Type your message..."
-          class="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          class="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          onkeydown="if(event.key === 'Enter') sendMessage()"
         />
         <button
           onclick="sendMessage()"
-          class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
         >
-          Send
+          <i class="fas fa-paper-plane"></i>
         </button>
       </div>
     </div>
@@ -63,12 +86,35 @@
 
     generateSessionId();
 
-    // Load chat history from localStorage
+    // Load chat history from localStorage (with duplicate prevention)
     function loadChatHistory() {
-      const chatHistory = JSON.parse(localStorage.getItem(`chatHistory_${sessionId}`)) || [];
       const chatBox = document.getElementById("chat-box");
-      chatBox.innerHTML = ""; // Clear the chat box before loading history
-      chatHistory.forEach(message => {
+      chatBox.innerHTML = `<div class="flex justify-center mb-4">
+        <span class="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full">Today</span>
+      </div>`; // Reset with the date header
+      
+      // Get chat history and ensure no duplicates
+      const chatHistoryRaw = localStorage.getItem(`chatHistory_${sessionId}`);
+      if (!chatHistoryRaw) return;
+      
+      // Parse and deduplicate messages by converting to a Map with JSON stringified messages as keys
+      const chatHistory = JSON.parse(chatHistoryRaw);
+      const uniqueMessages = [];
+      const seenMessages = new Set();
+      
+      for (const message of chatHistory) {
+        const messageKey = `${message.sender}:${message.text}`;
+        if (!seenMessages.has(messageKey)) {
+          seenMessages.add(messageKey);
+          uniqueMessages.push(message);
+        }
+      }
+      
+      // Save the deduplicated messages back to localStorage
+      localStorage.setItem(`chatHistory_${sessionId}`, JSON.stringify(uniqueMessages));
+      
+      // Display the deduplicated messages
+      uniqueMessages.forEach(message => {
         appendMessage(message.sender, message.text, false);
       });
     }
@@ -78,6 +124,16 @@
       const chatHistory = JSON.parse(localStorage.getItem(`chatHistory_${sessionId}`)) || [];
       chatHistory.push({ sender, text: message });
       localStorage.setItem(`chatHistory_${sessionId}`, JSON.stringify(chatHistory));
+    }
+
+    // Clear chat history
+    function clearChat() {
+      if (confirm("Are you sure you want to clear the chat history?")) {
+        localStorage.removeItem(`chatHistory_${sessionId}`);
+        document.getElementById("chat-box").innerHTML = `<div class="flex justify-center mb-4">
+          <span class="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full">Today</span>
+        </div>`;
+      }
     }
 
     async function sendMessage() {
@@ -90,6 +146,20 @@
       saveChatHistory("You", userMessage);
       inputField.value = "";
 
+      // Show typing indicator
+      const typingIndicator = document.createElement("div");
+      typingIndicator.id = "typing-indicator";
+      typingIndicator.classList.add("flex", "items-center", "gap-2", "message-bubble", "bg-gray-200", "text-gray-500", "p-3", "rounded-lg", "max-w-[80%]", "self-start", "mb-4");
+      typingIndicator.innerHTML = `
+        <div class="flex space-x-1">
+          <div class="h-2 w-2 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+          <div class="h-2 w-2 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+          <div class="h-2 w-2 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+        </div>
+      `;
+      document.getElementById("chat-box").appendChild(typingIndicator);
+      scrollToBottom();
+
       try {
         const response = await fetch('/api/chat', {
           method: 'POST',
@@ -99,6 +169,9 @@
             userMessage: userMessage
           })
         });
+
+        // Remove typing indicator
+        document.getElementById("typing-indicator").remove();
 
         if (!response.ok) {
           throw new Error('Network response was not ok');
@@ -111,42 +184,69 @@
         saveChatHistory("AI", aiMessage);
 
       } catch (error) {
+        // Remove typing indicator if it exists
+        const indicator = document.getElementById("typing-indicator");
+        if (indicator) indicator.remove();
+        
         console.error(error);
         appendMessage("Error", "There was a problem processing your request.");
       }
     }
 
+    function formatTimestamp() {
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+
     function appendMessage(sender, message, saveToHistory = true) {
       const chatBox = document.getElementById("chat-box");
       const messageElement = document.createElement("div");
-      messageElement.classList.add("flex", "flex-col", "mb-4");
+      messageElement.classList.add("flex", "flex-col", "mb-4", "animation-fade-in");
+
+      const timestamp = formatTimestamp();
 
       if (sender === "You") {
         messageElement.innerHTML = `
-          <div class="bg-purple-600 text-white p-3 rounded-lg max-w-[80%] self-end">
-            ${message}
+          <div class="flex flex-col items-end">
+            <div class="message-bubble bg-purple-600 text-white p-3 rounded-2xl rounded-tr-sm max-w-[80%] self-end shadow-sm">
+              ${message}
+            </div>
+            <div class="text-xs text-gray-500 mt-1">${timestamp}</div>
           </div>
         `;
       } else if (sender === "AI") {
         messageElement.innerHTML = `
-          <div class="bg-gray-200 text-gray-800 p-3 rounded-lg max-w-[80%] self-start">
-            ${message}
+          <div class="flex flex-col items-start">
+            <div class="message-bubble bg-white text-gray-800 p-3 rounded-2xl rounded-tl-sm max-w-[80%] self-start shadow-sm border border-gray-200">
+              ${message}
+            </div>
+            <div class="text-xs text-gray-500 mt-1">${timestamp}</div>
           </div>
         `;
       } else {
         messageElement.innerHTML = `
-          <div class="bg-red-100 text-red-800 p-3 rounded-lg max-w-[80%] self-start">
-            ${message}
+          <div class="flex flex-col items-start">
+            <div class="message-bubble bg-red-100 text-red-800 p-3 rounded-2xl max-w-[80%] self-start shadow-sm">
+              ${message}
+            </div>
+            <div class="text-xs text-gray-500 mt-1">${timestamp}</div>
           </div>
         `;
       }
 
       chatBox.appendChild(messageElement);
-      chatBox.scrollTop = chatBox.scrollHeight;
+      scrollToBottom();
 
       if (saveToHistory) {
         saveChatHistory(sender, message);
       }
+    }
+
+    function scrollToBottom() {
+      const chatBox = document.getElementById("chat-box");
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
 
     // Load chat history when the page loads
