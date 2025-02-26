@@ -4,77 +4,48 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Generative AI Chat</title>
+  <!-- Include Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    /* Custom scrollbar for chat box */
+    .chat-box::-webkit-scrollbar {
+      width: 6px;
     }
-
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f1f1f1;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+    .chat-box::-webkit-scrollbar-track {
+      background: #f1f1f1;
     }
-
-    .chat-container {
-      width: 400px;
-      background-color: white;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
+    .chat-box::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 3px;
     }
-
-    .chat-box {
-      padding: 15px;
-      height: 400px;
-      overflow-y: auto;
-      flex-grow: 1;
-      border-bottom: 1px solid #ddd;
-    }
-
-    .input-container {
-      display: flex;
-      padding: 10px;
-      background-color: #fff;
-      border-top: 1px solid #ddd;
-    }
-
-    #user-input {
-      flex-grow: 1;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      font-size: 16px;
-    }
-
-    button {
-      padding: 10px 15px;
-      background-color: #6200ea;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #3700b3;
+    .chat-box::-webkit-scrollbar-thumb:hover {
+      background: #555;
     }
   </style>
 </head>
-<body>
-  <div class="chat-container">
-    <div id="chat-box" class="chat-box">
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+  <div class="bg-white rounded-lg shadow-lg w-[400px] flex flex-col">
+    <!-- Chat Box -->
+    <div id="chat-box" class="chat-box p-4 flex-1 overflow-y-auto">
       <!-- Chat messages will be dynamically added here -->
     </div>
-    <div class="input-container">
-      <input id="user-input" type="text" placeholder="Type your message..." />
-      <button onclick="sendMessage()">Send</button>
+
+    <!-- Input Container -->
+    <div class="border-t p-4 bg-gray-50">
+      <div class="flex gap-2">
+        <input
+          id="user-input"
+          type="text"
+          placeholder="Type your message..."
+          class="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+        />
+        <button
+          onclick="sendMessage()"
+          class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+        >
+          Send
+        </button>
+      </div>
     </div>
   </div>
 
@@ -96,6 +67,7 @@
     function loadChatHistory() {
       const chatHistory = JSON.parse(localStorage.getItem(`chatHistory_${sessionId}`)) || [];
       const chatBox = document.getElementById("chat-box");
+      chatBox.innerHTML = ""; // Clear the chat box before loading history
       chatHistory.forEach(message => {
         appendMessage(message.sender, message.text, false);
       });
@@ -147,8 +119,28 @@
     function appendMessage(sender, message, saveToHistory = true) {
       const chatBox = document.getElementById("chat-box");
       const messageElement = document.createElement("div");
-      messageElement.classList.add("message");
-      messageElement.innerHTML = `<strong>${sender}:</strong> ${message}`;
+      messageElement.classList.add("flex", "flex-col", "mb-4");
+
+      if (sender === "You") {
+        messageElement.innerHTML = `
+          <div class="bg-purple-600 text-white p-3 rounded-lg max-w-[80%] self-end">
+            ${message}
+          </div>
+        `;
+      } else if (sender === "AI") {
+        messageElement.innerHTML = `
+          <div class="bg-gray-200 text-gray-800 p-3 rounded-lg max-w-[80%] self-start">
+            ${message}
+          </div>
+        `;
+      } else {
+        messageElement.innerHTML = `
+          <div class="bg-red-100 text-red-800 p-3 rounded-lg max-w-[80%] self-start">
+            ${message}
+          </div>
+        `;
+      }
+
       chatBox.appendChild(messageElement);
       chatBox.scrollTop = chatBox.scrollHeight;
 
