@@ -220,37 +220,36 @@
       scrollToBottom();
 
       try {
-        // In real implementation, this would connect to your AI service
-        // For demonstration, we'll simulate a response after a short delay
-        setTimeout(() => {
-          // Remove typing indicator
-          const indicator = document.getElementById("typing-indicator");
-          if (indicator) indicator.remove();
-          
-          let aiMessage = "I understand your message. As Sia, I'm here to assist you with any questions or tasks!";
-          
-          // Simple response logic for demo purposes
-          if (userMessage.toLowerCase().includes("hello") || userMessage.toLowerCase().includes("hi")) {
-            aiMessage = "Hello there! How can I help you today?";
-          } else if (userMessage.toLowerCase().includes("help")) {
-            aiMessage = "I'm Sia, your AI assistant. I can help with information, tasks, or just chat. What would you like to know?";
-          } else if (userMessage.toLowerCase().includes("thank")) {
-            aiMessage = "You're welcome! Is there anything else I can help you with?";
-          }
-          
-          appendMessage("Sia", aiMessage);
-          saveChatHistory("Sia", aiMessage);
-          
-          // Optional: Add speech synthesis
-          if ('speechSynthesis' in window) {
-            const speech = new SpeechSynthesisUtterance(aiMessage);
-            speech.volume = 0.8;
-            speech.rate = 1;
-            speech.pitch = 1;
-            window.speechSynthesis.speak(speech);
-          }
-        }, 1500);
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: sessionId,
+            userMessage: userMessage
+          })
+        });
 
+        // Remove typing indicator
+        document.getElementById("typing-indicator").remove();
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        const aiMessage = data.response;
+
+        appendMessage("Sia", aiMessage);
+        saveChatHistory("Sia", aiMessage);
+
+        // Optional: Add speech synthesis
+        if ('speechSynthesis' in window) {
+          const speech = new SpeechSynthesisUtterance(aiMessage);
+          speech.volume = 0.8;
+          speech.rate = 1;
+          speech.pitch = 1;
+          window.speechSynthesis.speak(speech);
+        }
       } catch (error) {
         // Remove typing indicator if it exists
         const indicator = document.getElementById("typing-indicator");
