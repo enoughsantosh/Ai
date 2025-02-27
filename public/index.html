@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generative AI Chat</title>
+  <title>Sia AI Assistant</title>
   <!-- Include Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -29,51 +29,98 @@
     .message-bubble:hover {
       transform: translateY(-2px);
     }
+    /* Glassmorphism effect */
+    .glass {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+    /* Microphone pulse animation */
+    .mic-pulse {
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 10px rgba(147, 51, 234, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(147, 51, 234, 0);
+      }
+    }
   </style>
 </head>
-<body class="bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center h-screen font-sans">
-  <div class="bg-white rounded-xl shadow-xl w-[450px] h-[600px] flex flex-col">
+<body class="bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 flex items-center justify-center h-screen font-sans">
+  <div class="glass rounded-xl shadow-xl w-[450px] h-[600px] flex flex-col">
     <!-- Header -->
-    <div class="bg-purple-700 text-white p-4 rounded-t-xl flex items-center justify-between">
+    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 rounded-t-xl flex items-center justify-between">
       <div class="flex items-center">
-        <i class="fas fa-robot mr-2"></i>
-        <h1 class="text-xl font-semibold">AI Assistant</h1>
+        <i class="fas fa-robot mr-2 text-purple-200"></i>
+        <h1 class="text-xl font-semibold">Sia</h1>
       </div>
-      <button onclick="clearChat()" class="text-white/80 hover:text-white transition-colors">
-        <i class="fas fa-trash-alt"></i>
-      </button>
+      <div class="flex gap-2">
+        <button id="theme-toggle" class="text-white/80 hover:text-white transition-colors px-2 py-1 rounded-full">
+          <i class="fas fa-moon"></i>
+        </button>
+        <button onclick="clearChat()" class="text-white/80 hover:text-white transition-colors px-2 py-1 rounded-full">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      </div>
     </div>
 
     <!-- Chat Box -->
-    <div id="chat-box" class="chat-box p-4 flex-1 overflow-y-auto bg-gray-50">
+    <div id="chat-box" class="chat-box p-4 flex-1 overflow-y-auto bg-transparent">
       <div class="flex justify-center mb-4">
-        <span class="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full">Today</span>
+        <span class="bg-gray-200/70 text-gray-600 text-xs px-3 py-1 rounded-full">Today</span>
+      </div>
+      <!-- Welcome message -->
+      <div class="flex flex-col items-start mb-4">
+        <div class="message-bubble bg-white text-gray-800 p-3 rounded-2xl rounded-tl-sm max-w-[80%] self-start shadow-sm border border-gray-200">
+          <p>Hi, I'm Sia! How can I assist you today?</p>
+        </div>
+        <div class="text-xs text-gray-500 mt-1">Just now</div>
       </div>
       <!-- Chat messages will be dynamically added here -->
     </div>
 
     <!-- Input Container -->
-    <div class="border-t p-4 bg-white rounded-b-xl">
-      <div class="flex gap-2">
+    <div class="border-t p-4 bg-white/50 rounded-b-xl">
+      <div class="flex gap-2 items-center">
         <input
           id="user-input"
           type="text"
           placeholder="Type your message..."
-          class="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          class="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white/80"
           onkeydown="if(event.key === 'Enter') sendMessage()"
         />
         <button
+          id="mic-button"
+          onclick="toggleSpeechRecognition()"
+          class="bg-purple-100 text-purple-600 p-3 rounded-lg hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
+        >
+          <i class="fas fa-microphone"></i>
+        </button>
+        <button
           onclick="sendMessage()"
-          class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
+          class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
         >
           <i class="fas fa-paper-plane"></i>
         </button>
+      </div>
+      <div id="speech-status" class="text-xs text-purple-600 mt-1 text-center hidden">
+        Listening...
       </div>
     </div>
   </div>
 
   <script>
     let sessionId;
+    let recognition;
+    let isListening = false;
+    let darkMode = false;
 
     // Generate a unique session ID when the user opens the app
     function generateSessionId() {
@@ -90,8 +137,14 @@
     function loadChatHistory() {
       const chatBox = document.getElementById("chat-box");
       chatBox.innerHTML = `<div class="flex justify-center mb-4">
-        <span class="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full">Today</span>
-      </div>`; // Reset with the date header
+        <span class="bg-gray-200/70 text-gray-600 text-xs px-3 py-1 rounded-full">Today</span>
+      </div>
+      <div class="flex flex-col items-start mb-4">
+        <div class="message-bubble bg-white text-gray-800 p-3 rounded-2xl rounded-tl-sm max-w-[80%] self-start shadow-sm border border-gray-200">
+          <p>Hi, I'm Sia! How can I assist you today?</p>
+        </div>
+        <div class="text-xs text-gray-500 mt-1">Just now</div>
+      </div>`; // Reset with the date header and welcome message
       
       // Get chat history and ensure no duplicates
       const chatHistoryRaw = localStorage.getItem(`chatHistory_${sessionId}`);
@@ -131,7 +184,13 @@
       if (confirm("Are you sure you want to clear the chat history?")) {
         localStorage.removeItem(`chatHistory_${sessionId}`);
         document.getElementById("chat-box").innerHTML = `<div class="flex justify-center mb-4">
-          <span class="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full">Today</span>
+          <span class="bg-gray-200/70 text-gray-600 text-xs px-3 py-1 rounded-full">Today</span>
+        </div>
+        <div class="flex flex-col items-start mb-4">
+          <div class="message-bubble bg-white text-gray-800 p-3 rounded-2xl rounded-tl-sm max-w-[80%] self-start shadow-sm border border-gray-200">
+            <p>Hi, I'm Sia! How can I assist you today?</p>
+          </div>
+          <div class="text-xs text-gray-500 mt-1">Just now</div>
         </div>`;
       }
     }
@@ -149,7 +208,7 @@
       // Show typing indicator
       const typingIndicator = document.createElement("div");
       typingIndicator.id = "typing-indicator";
-      typingIndicator.classList.add("flex", "items-center", "gap-2", "message-bubble", "bg-gray-200", "text-gray-500", "p-3", "rounded-lg", "max-w-[80%]", "self-start", "mb-4");
+      typingIndicator.classList.add("flex", "items-center", "gap-2", "message-bubble", "bg-gray-200/70", "text-gray-500", "p-3", "rounded-lg", "max-w-[80%]", "self-start", "mb-4");
       typingIndicator.innerHTML = `
         <div class="flex space-x-1">
           <div class="h-2 w-2 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
@@ -161,27 +220,36 @@
       scrollToBottom();
 
       try {
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: sessionId,
-            userMessage: userMessage
-          })
-        });
-
-        // Remove typing indicator
-        document.getElementById("typing-indicator").remove();
-
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-
-        const data = await response.json();
-        const aiMessage = data.response;
-
-        appendMessage("AI", aiMessage);
-        saveChatHistory("AI", aiMessage);
+        // In real implementation, this would connect to your AI service
+        // For demonstration, we'll simulate a response after a short delay
+        setTimeout(() => {
+          // Remove typing indicator
+          const indicator = document.getElementById("typing-indicator");
+          if (indicator) indicator.remove();
+          
+          let aiMessage = "I understand your message. As Sia, I'm here to assist you with any questions or tasks!";
+          
+          // Simple response logic for demo purposes
+          if (userMessage.toLowerCase().includes("hello") || userMessage.toLowerCase().includes("hi")) {
+            aiMessage = "Hello there! How can I help you today?";
+          } else if (userMessage.toLowerCase().includes("help")) {
+            aiMessage = "I'm Sia, your AI assistant. I can help with information, tasks, or just chat. What would you like to know?";
+          } else if (userMessage.toLowerCase().includes("thank")) {
+            aiMessage = "You're welcome! Is there anything else I can help you with?";
+          }
+          
+          appendMessage("Sia", aiMessage);
+          saveChatHistory("Sia", aiMessage);
+          
+          // Optional: Add speech synthesis
+          if ('speechSynthesis' in window) {
+            const speech = new SpeechSynthesisUtterance(aiMessage);
+            speech.volume = 0.8;
+            speech.rate = 1;
+            speech.pitch = 1;
+            window.speechSynthesis.speak(speech);
+          }
+        }, 1500);
 
       } catch (error) {
         // Remove typing indicator if it exists
@@ -203,20 +271,20 @@
     function appendMessage(sender, message, saveToHistory = true) {
       const chatBox = document.getElementById("chat-box");
       const messageElement = document.createElement("div");
-      messageElement.classList.add("flex", "flex-col", "mb-4", "animation-fade-in");
+      messageElement.classList.add("flex", "flex-col", "mb-4");
 
       const timestamp = formatTimestamp();
 
       if (sender === "You") {
         messageElement.innerHTML = `
           <div class="flex flex-col items-end">
-            <div class="message-bubble bg-purple-600 text-white p-3 rounded-2xl rounded-tr-sm max-w-[80%] self-end shadow-sm">
+            <div class="message-bubble bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-3 rounded-2xl rounded-tr-sm max-w-[80%] self-end shadow-sm">
               ${message}
             </div>
             <div class="text-xs text-gray-500 mt-1">${timestamp}</div>
           </div>
         `;
-      } else if (sender === "AI") {
+      } else if (sender === "Sia") {
         messageElement.innerHTML = `
           <div class="flex flex-col items-start">
             <div class="message-bubble bg-white text-gray-800 p-3 rounded-2xl rounded-tl-sm max-w-[80%] self-start shadow-sm border border-gray-200">
@@ -249,8 +317,115 @@
       chatBox.scrollTop = chatBox.scrollHeight;
     }
 
+    // Speech recognition setup
+    function setupSpeechRecognition() {
+      if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        
+        recognition.onstart = function() {
+          isListening = true;
+          document.getElementById('mic-button').classList.add('bg-purple-500', 'text-white', 'mic-pulse');
+          document.getElementById('speech-status').classList.remove('hidden');
+          document.getElementById('user-input').placeholder = 'Listening...';
+        };
+        
+        recognition.onresult = function(event) {
+          const transcript = Array.from(event.results)
+            .map(result => result[0])
+            .map(result => result.transcript)
+            .join('');
+            
+          document.getElementById('user-input').value = transcript;
+        };
+        
+        recognition.onend = function() {
+          isListening = false;
+          document.getElementById('mic-button').classList.remove('bg-purple-500', 'text-white', 'mic-pulse');
+          document.getElementById('speech-status').classList.add('hidden');
+          document.getElementById('user-input').placeholder = 'Type your message...';
+          
+          // If we have content, send the message
+          const transcript = document.getElementById('user-input').value.trim();
+          if (transcript) {
+            sendMessage();
+          }
+        };
+        
+        recognition.onerror = function(event) {
+          console.error('Speech recognition error', event.error);
+          isListening = false;
+          document.getElementById('mic-button').classList.remove('bg-purple-500', 'text-white', 'mic-pulse');
+          document.getElementById('speech-status').classList.add('hidden');
+          document.getElementById('user-input').placeholder = 'Type your message...';
+        };
+      } else {
+        console.log('Speech recognition not supported');
+        document.getElementById('mic-button').style.display = 'none';
+      }
+    }
+
+    function toggleSpeechRecognition() {
+      if (!recognition) {
+        setupSpeechRecognition();
+      }
+      
+      if (isListening) {
+        recognition.stop();
+      } else {
+        document.getElementById('user-input').value = '';
+        recognition.start();
+      }
+    }
+
+    // Theme toggle
+    document.getElementById('theme-toggle').addEventListener('click', function() {
+      darkMode = !darkMode;
+      const body = document.body;
+      const chatContainer = document.querySelector('.glass');
+      const icon = this.querySelector('i');
+      
+      if (darkMode) {
+        body.classList.remove('from-indigo-100', 'via-purple-100', 'to-pink-100');
+        body.classList.add('bg-gradient-to-br', 'from-gray-900', 'via-purple-900', 'to-gray-900');
+        chatContainer.style.background = 'rgba(30, 30, 45, 0.8)';
+        icon.classList.remove('fa-moon');
+        icon.classList.add('fa-sun');
+        
+        // Add dark mode to all relevant elements
+        document.querySelectorAll('.message-bubble.bg-white').forEach(el => {
+          el.classList.remove('bg-white', 'text-gray-800');
+          el.classList.add('bg-gray-800', 'text-gray-200', 'border-gray-700');
+        });
+        
+        document.getElementById('user-input').classList.add('bg-gray-800', 'text-gray-200', 'border-gray-700');
+        document.querySelector('.border-t').classList.add('bg-gray-800/50');
+        
+      } else {
+        body.classList.remove('from-gray-900', 'via-purple-900', 'to-gray-900');
+        body.classList.add('bg-gradient-to-br', 'from-indigo-100', 'via-purple-100', 'to-pink-100');
+        chatContainer.style.background = 'rgba(255, 255, 255, 0.8)';
+        icon.classList.remove('fa-sun');
+        icon.classList.add('fa-moon');
+        
+        // Remove dark mode from all relevant elements
+        document.querySelectorAll('.message-bubble.bg-gray-800').forEach(el => {
+          el.classList.remove('bg-gray-800', 'text-gray-200', 'border-gray-700');
+          el.classList.add('bg-white', 'text-gray-800');
+        });
+        
+        document.getElementById('user-input').classList.remove('bg-gray-800', 'text-gray-200', 'border-gray-700');
+        document.querySelector('.border-t').classList.remove('bg-gray-800/50');
+      }
+    });
+
     // Load chat history when the page loads
-    window.onload = loadChatHistory;
+    window.onload = function() {
+      loadChatHistory();
+      setupSpeechRecognition();
+    };
   </script>
 </body>
 </html>
