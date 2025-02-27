@@ -1,4 +1,5 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { DynamicRetrievalMode,
+  GoogleGenerativeAI, } = require("@google/generative-ai");
 require("dotenv").config();
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -7,6 +8,16 @@ const genAI = new GoogleGenerativeAI(apiKey);
 const model = genAI.getGenerativeModel({
 model: "gemini-1.5-flash-8b",
 systemInstruction: "friendly,funny, Genz style,expression,minimum words",
+tools: [
+      {
+        googleSearchRetrieval: {
+          dynamicRetrievalConfig: {
+            mode: DynamicRetrievalMode.MODE_DYNAMIC,
+            dynamicThreshold: 0.7,
+          },
+        },
+      },
+    ],
 
 });
 
@@ -75,3 +86,4 @@ console.error("Error generating AI response:", error);
 res.status(500).json({ error: "Failed to generate response." });
 }
 };
+
