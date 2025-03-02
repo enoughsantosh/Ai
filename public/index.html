@@ -31,7 +31,7 @@
     }
     /* Glassmorphism effect */
     .glass {
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.8);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.18);
@@ -42,42 +42,75 @@
     }
     @keyframes pulse {
       0% {
-        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
+        box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7);
       }
       70% {
-        box-shadow: 0 0 0 10px rgba(99, 102, 241, 0);
+        box-shadow: 0 0 0 10px rgba(147, 51, 234, 0);
       }
       100% {
-        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+        box-shadow: 0 0 0 0 rgba(147, 51, 234, 0);
       }
+    }
+    /* Image upload preview animation */
+    .image-preview-enter {
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
     }
     /* TTS button animation */
     .tts-active {
       animation: ttsGlow 2s infinite alternate;
     }
     @keyframes ttsGlow {
-      from { box-shadow: 0 0 5px rgba(99, 102, 241, 0.5); }
-      to { box-shadow: 0 0 15px rgba(99, 102, 241, 0.8); }
+      from { box-shadow: 0 0 5px rgba(147, 51, 234, 0.5); }
+      to { box-shadow: 0 0 15px rgba(147, 51, 234, 0.8); }
+    }
+    /* Tooltip styles */
+    .tooltip {
+      position: relative;
+    }
+    .tooltip:before {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 5px 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+    }
+    .tooltip:hover:before {
+      opacity: 1;
+      visibility: visible;
+      bottom: calc(100% + 10px);
     }
   </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center min-h-screen font-sans p-4">
-  <div class="glass rounded-xl shadow-2xl w-full max-w-[500px] h-[650px] flex flex-col overflow-hidden">
+<body class="bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 flex items-center justify-center min-h-screen font-sans p-4">
+  <div class="glass rounded-xl shadow-xl w-full max-w-[500px] h-[650px] flex flex-col">
     <!-- Header -->
-    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 rounded-t-xl flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 rounded-t-xl flex items-center justify-between">
+      <div class="flex items-center">
+        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mr-3">
           <i class="fas fa-robot text-lg text-white"></i>
         </div>
         <div>
-          <h1 class="text-xl font-semibold">Sia AI</h1>
-          <div class="text-xs text-indigo-200 flex items-center">
+          <h1 class="text-xl font-semibold">Sia</h1>
+          <div class="text-xs text-purple-200 flex items-center">
             <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-1"></span>
             Online
           </div>
         </div>
       </div>
-      <div class="flex space-x-2">
+      <div class="flex gap-2">
         <button id="tts-toggle" data-tip="Toggle Text-to-Speech" class="tooltip text-white/80 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10">
           <i class="fas fa-volume-up"></i>
         </button>
@@ -91,7 +124,7 @@
     </div>
 
     <!-- Chat Box -->
-    <div id="chat-box" class="chat-box p-4 flex-1 overflow-y-auto bg-white/50">
+    <div id="chat-box" class="chat-box p-4 flex-1 overflow-y-auto bg-transparent">
       <div class="flex justify-center mb-4">
         <span class="bg-gray-200/70 text-gray-600 text-xs px-3 py-1 rounded-full">Today</span>
       </div>
@@ -105,21 +138,34 @@
       <!-- Chat messages will be dynamically added here -->
     </div>
 
+    <!-- Image preview area -->
+    <div id="image-preview-container" class="px-4 hidden">
+      <div class="relative bg-gray-100 rounded-lg p-2 mb-3 flex items-center">
+        <div id="image-preview" class="w-16 h-16 rounded bg-gray-200 flex items-center justify-center overflow-hidden image-preview-enter mr-2">
+          <img id="preview-img" src="" alt="Preview" class="object-cover w-full h-full">
+        </div>
+        <div class="flex-1 text-sm text-gray-600 truncate" id="image-name">Selected image</div>
+        <button onclick="cancelImageUpload()" class="text-gray-500 hover:text-red-500 ml-2 p-1">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+
     <!-- Input Container -->
-    <div class="border-t p-4 bg-white/70 rounded-b-xl">
+    <div class="border-t p-4 bg-white/50 rounded-b-xl">
       <div class="flex gap-2 items-center">
         <input
           id="user-input"
           type="text"
           placeholder="Type your message..."
-          class="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white/80"
+          class="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white/80"
           onkeydown="if(event.key === 'Enter') sendMessage()"
         />
         <button
           id="mic-button" 
           onclick="toggleSpeechRecognition()"
           data-tip="Voice Input"
-          class="tooltip bg-indigo-100 text-indigo-600 p-3 rounded-lg hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+          class="tooltip bg-purple-100 text-purple-600 p-3 rounded-lg hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
         >
           <i class="fas fa-microphone"></i>
         </button>
@@ -131,13 +177,19 @@
         >
           <i class="fas fa-image"></i>
         </button>
+        <button
+          onclick="sendMessage()"
+          data-tip="Send Message"
+          class="tooltip bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
+        >
+          <i class="fas fa-paper-plane"></i>
+        </button>
       </div>
-      <div id="speech-status" class="text-xs text-indigo-600 mt-1 text-center hidden">
+      <div id="speech-status" class="text-xs text-purple-600 mt-1 text-center hidden">
         <i class="fas fa-circle-notch fa-spin mr-1"></i> Listening...
       </div>
     </div>
   </div>
-
 
   <script>
     let sessionId;
