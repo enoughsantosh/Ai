@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sia AI Assistant</title>
+  <!-- Include Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Custom scrollbar for chat box */
+    .chat-box::-webkit-scrollbar {
+      width: 6px;
+    }
+    .chat-box::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    .chat-box::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 3px;
+    }
+    .chat-box::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+    /* Smooth transitions */
+    .message-bubble {
+      transition: all 0.2s ease;
+    }
+    .message-bubble:hover {
+      transform: translateY(-2px);
+    }
+    /* Glassmorphism effect */
+    .glass {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+    /* Microphone pulse animation */
+    .mic-pulse {
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 10px rgba(147, 51, 234, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(147, 51, 234, 0);
+      }
+    }
+    /* Image upload preview animation */
+    .image-preview-enter {
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    /* TTS button animation */
+    .tts-active {
+      animation: ttsGlow 2s infinite alternate;
+    }
+    @keyframes ttsGlow {
+      from { box-shadow: 0 0 5px rgba(147, 51, 234, 0.5); }
+      to { box-shadow: 0 0 15px rgba(147, 51, 234, 0.8); }
+    }
+    /* Tooltip styles */
+    .tooltip {
+      position: relative;
+    }
+    .tooltip:before {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 5px 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+    }
+    .tooltip:hover:before {
+      opacity: 1;
+      visibility: visible;
+      bottom: calc(100% + 10px);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 flex items-center justify-center min-h-screen font-sans p-4">
+  <div class="glass rounded-xl shadow-xl w-full max-w-[500px] h-[650px] flex flex-col">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 rounded-t-xl flex items-center justify-between">
+      <div class="flex items-center">
+        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mr-3">
+          <i class="fas fa-robot text-lg text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-semibold">Sia</h1>
+          <div class="text-xs text-purple-200 flex items-center">
+            <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-1"></span>
+            Online
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button id="tts-toggle" data-tip="Toggle Text-to-Speech" class="tooltip text-white/80 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10">
+          <i class="fas fa-volume-up"></i>
+        </button>
+        <button id="theme-toggle" data-tip="Toggle Dark Mode" class="tooltip text-white/80 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10">
+          <i class="fas fa-moon"></i>
+        </button>
+        <button onclick="clearChat()" data-tip="Clear Chat" class="tooltip text-white/80 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat Box -->
+    <div id="chat-box" class="chat-box p-4 flex-1 overflow-y-auto bg-transparent">
+      <div class="flex justify-center mb-4">
+        <span class="bg-gray-200/70 text-gray-600 text-xs px-3 py-1 rounded-full">Today</span>
+      </div>
+      <!-- Welcome message -->
+      <div class="flex flex-col items-start mb-4">
+        <div class="message-bubble bg-white text-gray-800 p-3 rounded-2xl rounded-tl-sm max-w-[80%] self-start shadow-sm border border-gray-200">
+          <p>Hi, I'm Sia! How can I assist you today?</p>
+        </div>
+        <div class="text-xs text-gray-500 mt-1">Just now</div>
+      </div>
+      <!-- Chat messages will be dynamically added here -->
+    </div>
+
+    <!-- Image preview area -->
+    <div id="image-preview-container" class="px-4 hidden">
+      <div class="relative bg-gray-100 rounded-lg p-2 mb-3 flex items-center">
+        <div id="image-preview" class="w-16 h-16 rounded bg-gray-200 flex items-center justify-center overflow-hidden image-preview-enter mr-2">
+          <img id="preview-img" src="" alt="Preview" class="object-cover w-full h-full">
+        </div>
+        <div class="flex-1 text-sm text-gray-600 truncate" id="image-name">Selected image</div>
+        <button onclick="cancelImageUpload()" class="text-gray-500 hover:text-red-500 ml-2 p-1">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Input Container -->
+    <div class="border-t p-4 bg-white/50 rounded-b-xl">
+      <div class="flex gap-2 items-center">
+        <input
+          id="user-input"
+          type="text"
+          placeholder="Type your message..."
+          class="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white/80"
+          onkeydown="if(event.key === 'Enter') sendMessage()"
+        />
+        <button
+          id="mic-button" 
+          onclick="toggleSpeechRecognition()"
+          data-tip="Voice Input"
+          class="tooltip bg-purple-100 text-purple-600 p-3 rounded-lg hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
+        >
+          <i class="fas fa-microphone"></i>
+        </button>
+        <input type="file" id="image-input" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+        <button 
+          onclick="document.getElementById('image-input').click()" 
+          data-tip="Upload Image"
+          class="tooltip bg-gray-100 text-gray-600 p-3 rounded-lg hover:bg-gray-200 focus:outline-none transition-colors"
+        >
+          <i class="fas fa-image"></i>
+        </button>
+        <button
+          onclick="sendMessage()"
+          data-tip="Send Message"
+          class="tooltip bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
+        >
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+      <div id="speech-status" class="text-xs text-purple-600 mt-1 text-center hidden">
+        <i class="fas fa-circle-notch fa-spin mr-1"></i> Listening...
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let sessionId;
+    let recognition;
+    let isListening = false;
+    let darkMode = false;
+    let ttsEnabled = true;
+    let currentUtterance = null;
+    let selectedImage = null;
+
+    // Generate a unique session ID when the user opens the app
+    function generateSessionId() {
+      sessionId = localStorage.getItem('sessionId');
+      if (!sessionId) {
+        sessionId = crypto.randomUUID();
+        localStorage.setItem('sessionId', sessionId);
+      }
+    }
+
+    generateSessionId();
+
+    // Load chat history from localStorage (with duplicate prevention)
+    function loadChatHistory() {
+      const chatBox = document.getElementById("chat-box");
+      chatBox.innerHTML = `<div class="flex justify-center mb-4">
+        <span class="bg-gray-200/70 text-gray-600 text-xs px-3 py-1 rounded-full">Today</span>
+      </div>
+      <div class="flex flex-col items-start mb-4">
+        <div class="message-bubble bg-white text-gray-800 p-3 rounded-2xl rounded-tl-sm max-w-[80%] self-start shadow-sm border border-gray-200">
+          <p>Hi, I'm Sia! How can I assist you today?</p>
+        </div>
+        <div class="text-xs text-gray-500 mt-1">Just now</div>
+      </div>`; // Reset with the date header and welcome message
+      
+      // Get chat history and ensure no duplicates
+      const chatHistoryRaw = localStorage.getItem(`chatHistory_${sessionId}`);
+      if (!chatHistoryRaw) return;
+      
+      // Parse and deduplicate messages by converting to a Map with JSON stringified messages as keys
+      const chatHistory = JSON.parse(chatHistoryRaw);
+      const uniqueMessages = [];
+      const seenMessages = new Set();
+      
+      for (const message of chatHistory) {
+        const messageKey = `${message.sender}:${message.text}`;
+        if (!seenMessages.has(messageKey)) {
+          seenMessages.add(messageKey);
+          uniqueMessages.push(message);
+        }
+      }
+      
+      // Save the deduplicated messages back to localStorage
+      localStorage.setItem(`chatHistory_${sessionId}`, JSON.stringify(uniqueMessages));
+      
+      // Display the deduplicated messages
+      uniqueMessages.forEach(message => {
+        appendMessage(message.sender, message.text, false);
+      });
+    }
+
+    // Save chat history to localStorage
+    function saveChatHistory(sender, message) {
+      const chatHistory = JSON.parse(localStorage.getItem(`chatHistory_${sessionId}`)) || [];
+      chatHistory.push({ sender, text: message });
+      localStorage.setItem(`chatHistory_${sessionId}`, JSON.stringify(chatHistory));
+    }
+
+    // Clear chat history
+    function clearChat() {
+      if (confirm("Are you sure you want to clear the chat history?")) {
+        localStorage.removeItem(`chatHistory_${sessionId}`);
+        document.getElementById("chat-box").innerHTML = `<div class="flex justify-center mb-4">
+          <span class="bg-gray-200/70 text-gray-600 text-xs px-3 py-1 rounded-full">Today</span>
+        </div>
+        <div class="flex flex-col items-start mb-4">
+          <div class="message-bubble bg-white text-gray-800 p-3 rounded-2xl rounded-tl-sm max-w-[80%] self-start shadow-sm border border-gray-200">
+            <p>Hi, I'm Sia! How can I assist you today?</p>
+          </div>
+          <div class="text-xs text-gray-500 mt-1">Just now</div>
+        </div>`;
+        
+        // Clear any selected image
+        cancelImageUpload();
+      }
+    }
+
+    async function sendMessage() {
+      const inputField = document.getElementById("user-input");
+      const userMessage = inputField.value.trim();
+      
+      // Don't send if both message and image are empty
+      if (!userMessage && !selectedImage) return;
+      
+      // Create message content (text + image if any)
+      let messageContent = userMessage;
+      let apiPayload = {
+        sessionId: sessionId,
+        userMessage: userMessage
+      };
+      
+      // If there's an image, include it in the display and API payload
+      if (selectedImage) {
+        messageContent = userMessage ? 
+          `${userMessage}<br><img src="${selectedImage.preview}" class="max-w-[200px] mt-2 rounded-lg shadow-md">` :
+          `<img src="${selectedImage.preview}" class="max-w-[200px] rounded-lg shadow-md">`;
+        
+        apiPayload.image = selectedImage.base64;
+      }
+      
+      appendMessage("You", messageContent);
+      saveChatHistory("You", messageContent);
+      inputField.value = "";
+      
+      // Clear selected image after sending
+      cancelImageUpload();
+
+      // Show typing indicator
+      const typingIndicator = document.createElement("div");
+      typingIndicator.id = "typing-indicator";
+      typingIndicator.classList.add("flex", "items-center", "gap-2", "message-bubble", "bg-gray-200/70", "text-gray-500", "p-3", "rounded-lg", "max-w-[80%]", "self-start", "mb-4");
+      typingIndicator.innerHTML = `
+        <div class="flex space-x-1">
+          <div class="h-2 w-2 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+          <div class="h-2 w-2 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+          <div class="h-2 w-2 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+        </div>
+      `;
+      document.getElementById("chat-box").appendChild(typingIndicator);
+      scrollToBottom();
+
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(apiPayload)
+        });
+
+        // Remove typing indicator
+        document.getElementById("typing-indicator").remove();
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        const aiMessage = data.response;
+
+        appendMessage("Sia", aiMessage);
+        saveChatHistory("Sia", aiMessage);
+
+        // Text-to-speech if enabled
+        speakText(aiMessage);
+      } catch (error) {
+        // Remove typing indicator if it exists
+        const indicator = document.getElementById("typing-indicator");
+        if (indicator) indicator.remove();
+        
+        console.error(error);
+        appendMessage("Error", "There was a problem processing your request.");
+      }
+    }
+
+    function formatTimestamp() {
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+
+    function appendMessage(sender, message, saveToHistory = true) {
+      const chatBox = document.getElementById("chat-box");
+      const messageElement = document.createElement("div");
+      messageElement.classList.add("flex", "flex-col", "mb-4");
+
+      const timestamp = formatTimestamp();
+      
+      // Process message content for rendering
+      // For Sia's messages, add a play button if TTS is enabled
+      let messageContent = message;
+      let ttsButton = '';
+      
+      if (sender === "Sia" && ttsEnabled) {
+        const messageId = `msg-${Date.now()}`;
+        ttsButton = `
+          <button onclick="playSingleMessage('${messageId}')" class="tts-message-btn ml-2 text-purple-500 hover:text-purple-700">
+            <i class="fas fa-volume-up"></i>
+          </button>
+        `;
+        messageElement.dataset.messageId = messageId;
+        messageElement.dataset.messageText = extractTextFromHTML(message);
+      }
+
+      if (sender === "You") {
+        messageElement.innerHTML = `
+          <div class="flex flex-col items-end">
+            <div class="message-bubble bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-3 rounded-2xl rounded-tr-sm max-w-[80%] self-end shadow-sm">
+              ${messageContent}
+            </div>
+            <div class="text-xs text-gray-500 mt-1">${timestamp}</div>
+          </div>
+        `;
+      } else if (sender === "Sia") {
+        messageElement.innerHTML = `
+          <div class="flex flex-col items-start">
+            <div class="message-bubble bg-white text-gray-800 p-3 rounded-2xl rounded-tl-sm max-w-[80%] self-start shadow-sm border border-gray-200">
+              ${messageContent}
+              ${ttsButton}
+            </div>
+            <div class="text-xs text-gray-500 mt-1">${timestamp}</div>
+          </div>
+        `;
+      } else {
+        messageElement.innerHTML = `
+          <div class="flex flex-col items-start">
+            <div class="message-bubble bg-red-100 text-red-800 p-3 rounded-2xl max-w-[80%] self-start shadow-sm">
+              ${messageContent}
+            </div>
+            <div class="text-xs text-gray-500 mt-1">${timestamp}</div>
+          </div>
+        `;
+      }
+
+      chatBox.appendChild(messageElement);
+      scrollToBottom();
+
+      if (saveToHistory) {
+        saveChatHistory(sender, message);
+      }
+    }
+
+    function scrollToBottom() {
+      const chatBox = document.getElementById("chat-box");
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Extract plain text from HTML for TTS
+    function extractTextFromHTML(html) {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      return tempDiv.textContent || tempDiv.innerText || '';
+    }
+
+    // Speech synthesis for TTS
+    function speakText(text) {
+      if (!ttsEnabled || !('speechSynthesis' in window)) return;
+      
+      // Cancel any ongoing speech
+      if (currentUtterance) {
+        window.speechSynthesis.cancel();
+      }
+      
+      // Extract plain text from HTML
+      const plainText = extractTextFromHTML(text);
+      
+      // Create and configure new utterance
+      currentUtterance = new SpeechSynthesisUtterance(plainText);
+      currentUtterance.volume = 0.8;
+      currentUtterance.rate = 1;
+      currentUtterance.pitch = 1;
+      
+      // Get available voices and set a good one if available
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        // Try to find a good female voice
+        const preferredVoice = voices.find(voice => 
+          voice.name.includes('Female') || 
+          voice.name.includes('Samantha') ||
+          voice.name.includes('Google UK English Female')
+        );
+        if (preferredVoice) {
+          currentUtterance.voice = preferredVoice;
+        }
+      }
+      
+      // Start speaking
+      window.speechSynthesis.speak(currentUtterance);
+      
+      // Add speaking indicator to TTS button
+      document.getElementById('tts-toggle').classList.add('tts-active');
+      
+      // Remove indicator when done speaking
+      currentUtterance.onend = function() {
+        document.getElementById('tts-toggle').classList.remove('tts-active');
+        currentUtterance = null;
+      };
+    }
+
+    // Play TTS for a single message
+    function playSingleMessage(messageId) {
+      const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+      if (messageElement && messageElement.dataset.messageText) {
+        speakText(messageElement.dataset.messageText);
+      }
+    }
+
+    // Speech recognition setup
+    function setupSpeechRecognition() {
+      if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        
+        recognition.onstart = function() {
+          isListening = true;
+          document.getElementById('mic-button').classList.add('bg-purple-500', 'text-white', 'mic-pulse');
+          document.getElementById('speech-status').classList.remove('hidden');
+          document.getElementById('user-input').placeholder = 'Listening...';
+        };
+        
+        recognition.onresult = function(event) {
+          const transcript = Array.from(event.results)
+            .map(result => result[0])
+            .map(result => result.transcript)
+            .join('');
+            
+          document.getElementById('user-input').value = transcript;
+        };
+        
+        recognition.onend = function() {
+          isListening = false;
+          document.getElementById('mic-button').classList.remove('bg-purple-500', 'text-white', 'mic-pulse');
+          document.getElementById('speech-status').classList.add('hidden');
+          document.getElementById('user-input').placeholder = 'Type your message...';
+          
+          // If we have content, send the message
+          const transcript = document.getElementById('user-input').value.trim();
+          if (transcript) {
+            sendMessage();
+          }
+        };
+        
+        recognition.onerror = function(event) {
+          console.error('Speech recognition error', event.error);
+          isListening = false;
+          document.getElementById('mic-button').classList.remove('bg-purple-500', 'text-white', 'mic-pulse');
+          document.getElementById('speech-status').classList.add('hidden');
+          document.getElementById('user-input').placeholder = 'Type your message...';
+        };
+      } else {
+        console.log('Speech recognition not supported');
+        document.getElementById('mic-button').style.display = 'none';
+      }
+    }
+
+    function toggleSpeechRecognition() {
+      if (!recognition) {
+        setupSpeechRecognition();
+      }
+      
+      if (isListening) {
+        recognition.stop();
+      } else {
+        document.getElementById('user-input').value = '';
+        recognition.start();
+      }
+    }
+
+    // Image upload handling
+    async function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      // Check file size - limit to 5MB
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File is too large. Please select an image under 5MB.");
+        return;
+      }
+      
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        alert("Please select a valid image file.");
+        return;
+      }
+
+      // Convert image to Base64
+      const reader = new FileReader();
+      reader.onloadend = function() {
+        const base64Data = reader.result.split(',')[1];
+        const previewUrl = reader.result;
+        
+        // Store image data
+        selectedImage = {
+          file: file,
+          base64: base64Data,
+          preview: previewUrl
+        };
+        
+        // Show image preview
+        document.getElementById('preview-img').src = previewUrl;
+        document.getElementById('image-name').textContent = file.name;
+        document.getElementById('image-preview-container').classList.remove('hidden');
+        
+        // Focus on input field for adding a message with the image
+        document.getElementById('user-input').focus();
+      };
+      
+      reader.readAsDataURL(file);
+    }
+
+    // Cancel image upload
+    function cancelImageUpload() {
+      selectedImage = null;
+      document.getElementById('image-preview-container').classList.add('hidden');
+      document.getElementById('image-input').value = '';
+    }
+
+    // Toggle TTS
+    document.getElementById('tts-toggle').addEventListener('click', function() {
+      ttsEnabled = !ttsEnabled;
+      const icon = this.querySelector('i');
+      
+      if (ttsEnabled) {
+        icon.classList.remove('fa-volume-mute');
+        icon.classList.add('fa-volume-up');
+        this.classList.add('text-purple-400');
+        this.setAttribute('data-tip', 'Disable Text-to-Speech');
+      } else {
+        // Stop any current speech
+        if (currentUtterance) {
+          window.speechSynthesis.cancel();
+          currentUtterance = null;
+        }
+        
+        icon.classList.remove('fa-volume-up');
+        icon.classList.add('fa-volume-mute');
+        this.classList.remove('text-purple-400');
+        this.setAttribute('data-tip', 'Enable Text-to-Speech');
+      }
+      
+      // Update TTS buttons on messages
+      const allMessageButtons = document.querySelectorAll('.tts-message-btn');
+      allMessageButtons.forEach(btn => {
+        btn.style.display = ttsEnabled ? 'inline-block' : 'none';
+      });
+    });
+
+    // Theme toggle
+    document.getElementById('theme-toggle').addEventListener('click', function() {
+      darkMode = !darkMode;
+      const body = document.body;
+      const chatContainer = document.querySelector('.glass');
+      const icon = this.querySelector('i');
+      
+      if (darkMode) {
+        body.classList.remove('from-indigo-100', 'via-purple-100', 'to-pink-100');
+        body.classList.add('bg-gradient-to-br', 'from-gray-900', 'via-purple-900', 'to-gray-900');
+        chatContainer.style.background = 'rgba(30, 30, 45, 0.8)';
+        icon.classList.remove('fa-moon');
+        icon.classList.add('fa-sun');
+        
+        // Add dark mode to all relevant elements
+        document.querySelectorAll('.message-bubble.bg-white').forEach(el => {
+          el.classList.remove('bg-white', 'text-gray-800');
+          el.classList.add('bg-gray-800', 'text-gray-200', 'border-gray-700');
+        });
+        
+        document.getElementById('user-input').classList.add('bg-gray-800', 'text-gray-200', 'border-gray-700');
+        document.querySelector('.border-t').classList.add('bg-gray-800/50');
+        
+      } else {
+        body.classList.remove('from-gray-900', 'via-purple-900', 'to-gray-900');
+        body.classList.add('bg-gradient-to-br', 'from-indigo-100', 'via-purple-100', 'to-pink-100');
+        chatContainer.style.background = 'rgba(255, 255, 255, 0.8)';
+        icon.classList.remove('fa-sun');
+        icon.classList.add('fa-moon');
+        
+        // Remove dark mode from all relevant elements
+        document.querySelectorAll('.message-bubble.bg-gray-800').forEach(el => {
+          el.classList.remove('bg-gray-800', 'text-gray-200', 'border-gray-700');
+          el.classList.add('bg-white', 'text-gray-800');
+        });
+        
+        document.getElementById('user-input').classList.remove('bg-gray-800', 'text-gray-200', 'border-gray-700');
+        document.querySelector('.border-t').classList.remove('bg-gray-800/50');
+      }
+    });
+
+    // Initialize voices when they become available
+    if ('speechSynthesis' in window) {
+      // Some browsers load voices asynchronously
+      speechSynthesis.onvoiceschanged = function() {
+        // This will trigger when voices are loaded
+        console.log("Voices loaded:", speechSynthesis.getVoices().length);
+      };
+    }
+
+    // Load chat history when the page loads
+    window.onload = function() {
+      loadChatHistory();
+      setupSpeechRecognition();
+    };
+  </script>
+</body>
+</html>
