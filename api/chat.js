@@ -7,16 +7,7 @@ const genAI = new GoogleGenerativeAI(apiKey);
 // Enable Google Search Tool
 const model = genAI.getGenerativeModel({
   model: "gemini-1.5-flash-8b",
-  tools: [
-    {
-      google_search_retrieval: {
-        dynamic_retrieval_config: {
-          mode: "MODE_DYNAMIC",
-          dynamic_threshold: 0.3,
-        },
-      },
-    },
-  ],
+  
 });
 
 const generationConfig = {
