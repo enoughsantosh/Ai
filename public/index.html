@@ -103,6 +103,10 @@
         >
           <i class="fas fa-microphone"></i>
         </button>
+        <input type="file" id="image-input" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+<button onclick="document.getElementById('image-input').click()" class="bg-gray-200 p-3 rounded-lg hover:bg-gray-300 focus:outline-none">
+  <i class="fas fa-image"></i>
+</button>
         <button
           onclick="sendMessage()"
           class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
@@ -425,6 +429,42 @@
       loadChatHistory();
       setupSpeechRecognition();
     };
+
+      async function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Convert image to Base64
+  const reader = new FileReader();
+  reader.onloadend = async function () {
+    const base64Image = reader.result.split(',')[1];
+
+    // Display image in chat
+    appendMessage("You", `<img src="${reader.result}" class="max-w-[200px] rounded-lg shadow-md">`);
+
+    // Send image to the API
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: sessionId,
+          userMessage: "Here's an image:",
+          image: base64Image, // Send image data
+        })
+      });
+
+      const data = await response.json();
+      if (data.response) {
+        appendMessage("Sia", data.response);
+      }
+    } catch (error) {
+      console.error("Error sending image:", error);
+      appendMessage("Error", "Failed to upload image.");
+    }
+  };
+  reader.readAsDataURL(file);
+      }
   </script>
 </body>
 </html>
